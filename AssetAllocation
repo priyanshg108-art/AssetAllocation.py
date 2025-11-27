@@ -1,0 +1,428 @@
+# streamlit_investment_profiles.py
+"""
+Streamlit app: Investment Asset Classes + Recommended Portfolios by Risk Profile
+Save this file as streamlit_investment_profiles.py and run:
+    pip install streamlit pandas plotly
+    streamlit run streamlit_investment_profiles.py
+"""
+
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import io
+
+st.set_page_config(page_title="Investment Profiles & Asset Classes", layout="wide")
+
+# ---------------------------
+# Data: Asset classes details
+# ---------------------------
+ASSETS = [
+    {
+        "Asset": "Cash / Savings Account",
+        "Risk": "Very Low",
+        "Reward": "Very Low",
+        "Time_Horizon": "0 - 2 years",
+        "Expected_Return_%": "2 - 4"
+    },
+    {
+        "Asset": "Fixed Deposits / Time Deposits",
+        "Risk": "Very Low",
+        "Reward": "Low",
+        "Time_Horizon": "1 - 5 years",
+        "Expected_Return_%": "5 - 7"
+    },
+    {
+        "Asset": "Money Market Funds / T-Bills",
+        "Risk": "Very Low",
+        "Reward": "Low",
+        "Time_Horizon": "0 - 1 year",
+        "Expected_Return_%": "3 - 6"
+    },
+    {
+        "Asset": "Government Bonds / Sovereign Bonds",
+        "Risk": "Low",
+        "Reward": "Low",
+        "Time_Horizon": "3 - 10+ years",
+        "Expected_Return_%": "5 - 8"
+    },
+    {
+        "Asset": "Corporate Bonds",
+        "Risk": "Low - Moderate",
+        "Reward": "Moderate",
+        "Time_Horizon": "3 - 7 years",
+        "Expected_Return_%": "6 - 10"
+    },
+    {
+        "Asset": "Investment Grade Debt Funds",
+        "Risk": "Low - Moderate",
+        "Reward": "Moderate",
+        "Time_Horizon": "3 - 7 years",
+        "Expected_Return_%": "6 - 10"
+    },
+    {
+        "Asset": "Gold / Sovereign Gold Bonds / Gold ETFs",
+        "Risk": "Medium",
+        "Reward": "Moderate",
+        "Time_Horizon": "3 - 8 years",
+        "Expected_Return_%": "6 - 12"
+    },
+    {
+        "Asset": "Large-cap Equity / Index Funds / ETFs",
+        "Risk": "Moderate",
+        "Reward": "Moderate - High",
+        "Time_Horizon": "5+ years",
+        "Expected_Return_%": "8 - 14"
+    },
+    {
+        "Asset": "Mid-cap Equity Funds",
+        "Risk": "High",
+        "Reward": "High",
+        "Time_Horizon": "5 - 10 years",
+        "Expected_Return_%": "12 - 18"
+    },
+    {
+        "Asset": "Small-cap Equity Funds",
+        "Risk": "Very High",
+        "Reward": "Very High",
+        "Time_Horizon": "7 - 10+ years",
+        "Expected_Return_%": "15 - 25"
+    },
+    {
+        "Asset": "International Equity / Global ETFs",
+        "Risk": "Moderate - High",
+        "Reward": "High",
+        "Time_Horizon": "5+ years",
+        "Expected_Return_%": "8 - 16"
+    },
+    {
+        "Asset": "Real Estate (Direct) / Property",
+        "Risk": "High",
+        "Reward": "High",
+        "Time_Horizon": "7 - 15 years",
+        "Expected_Return_%": "7 - 15"
+    },
+    {
+        "Asset": "REITs / Real Estate Investment Trusts",
+        "Risk": "Moderate",
+        "Reward": "Moderate",
+        "Time_Horizon": "3 - 7 years",
+        "Expected_Return_%": "7 - 12"
+    },
+    {
+        "Asset": "Infrastructure InvITs",
+        "Risk": "Moderate",
+        "Reward": "Moderate",
+        "Time_Horizon": "3 - 7 years",
+        "Expected_Return_%": "7 - 13"
+    },
+    {
+        "Asset": "Commodities (ex-Gold) / Trading",
+        "Risk": "High - Very High",
+        "Reward": "High",
+        "Time_Horizon": "Short - Medium",
+        "Expected_Return_%": "Variable / volatile"
+    },
+    {
+        "Asset": "Cryptocurrency",
+        "Risk": "Extremely High",
+        "Reward": "Very High",
+        "Time_Horizon": "5+ years (speculative)",
+        "Expected_Return_%": "20 - 200+ (very volatile)"
+    },
+    {
+        "Asset": "Peer-to-Peer Lending",
+        "Risk": "High",
+        "Reward": "High (income)",
+        "Time_Horizon": "1 - 5 years",
+        "Expected_Return_%": "8 - 20"
+    },
+    {
+        "Asset": "Private Equity / Start-up / Angel Investing",
+        "Risk": "Very High",
+        "Reward": "Very High",
+        "Time_Horizon": "7 - 12 years",
+        "Expected_Return_%": "30 - 200+ (illiquid)"
+    },
+    {
+        "Asset": "Collectibles / Art / Luxury goods",
+        "Risk": "High",
+        "Reward": "Moderate - High",
+        "Time_Horizon": "5 - 15 years",
+        "Expected_Return_%": "Variable"
+    },
+    {
+        "Asset": "Derivatives (Options/Futures) - Speculative",
+        "Risk": "Extremely High",
+        "Reward": "Very High",
+        "Time_Horizon": "Days - Months (short term)",
+        "Expected_Return_%": "Highly variable / can lose >100%"
+    }
+]
+
+df_assets = pd.DataFrame(ASSETS)
+
+# ---------------------------
+# Recommended allocations
+# ---------------------------
+RECOMMENDED = {
+    "Low-risk (Age 45-65)": {
+        "Cash / Savings Account": 10,
+        "Fixed Deposits / Time Deposits": 20,
+        "Government Bonds / Sovereign Bonds": 25,
+        "Corporate Bonds": 15,
+        "REITs / Real Estate Investment Trusts": 5,
+        "Gold / Sovereign Gold Bonds / Gold ETFs": 10,
+        "Large-cap Equity / Index Funds / ETFs": 10,
+        "International Equity / Global ETFs": 5
+    },
+    "Moderate-risk (Age 30-45)": {
+        "Cash / Savings Account": 5,
+        "Fixed Deposits / Time Deposits": 10,
+        "Government Bonds / Sovereign Bonds": 10,
+        "Corporate Bonds": 10,
+        "Large-cap Equity / Index Funds / ETFs": 30,
+        "Mid-cap Equity Funds": 10,
+        "Gold / Sovereign Gold Bonds / Gold ETFs": 5,
+        "International Equity / Global ETFs": 10,
+        "REITs / Real Estate Investment Trusts": 5,
+        "Peer-to-Peer Lending": 5
+    },
+    "High-risk (Age 25-35)": {
+        "Cash / Savings Account": 3,
+        "Large-cap Equity / Index Funds / ETFs": 30,
+        "Mid-cap Equity Funds": 20,
+        "Small-cap Equity Funds": 15,
+        "International Equity / Global ETFs": 10,
+        "Gold / Sovereign Gold Bonds / Gold ETFs": 5,
+        "Cryptocurrency": 5,
+        "Peer-to-Peer Lending": 5,
+        "REITs / Real Estate Investment Trusts": 7
+    }
+}
+
+# ---------------------------
+# Helper functions
+# ---------------------------
+def make_allocation_df(allocation_map):
+    rows = []
+    for asset, pct in allocation_map.items():
+        # find asset details or use defaults
+        match = df_assets[df_assets["Asset"] == asset]
+        if not match.empty:
+            row = match.iloc[0].to_dict()
+            row["Allocation_%"] = pct
+        else:
+            row = {
+                "Asset": asset,
+                "Risk": "Custom",
+                "Reward": "Custom",
+                "Time_Horizon": "Custom",
+                "Expected_Return_%": "Custom",
+                "Allocation_%": pct
+            }
+        rows.append(row)
+    df = pd.DataFrame(rows)
+    return df
+
+def normalize_allocations(d):
+    total = sum(d.values())
+    if total == 0:
+        return d
+    return {k: round(v * 100.0 / total, 2) for k, v in d.items()}
+
+def df_to_csv_bytes(df):
+    buf = io.BytesIO()
+    df.to_csv(buf, index=False)
+    buf.seek(0)
+    return buf
+
+# ---------------------------
+# UI Layout
+# ---------------------------
+st.title("Investment Asset Classes & Recommended Portfolios")
+st.markdown(
+    """
+    Select a risk profile to see recommended asset allocations, risk/reward/time details for each asset,
+    and interactive visualizations. You can adjust allocations and download the final allocation as CSV.
+    """
+)
+
+left_col, right_col = st.columns([2, 1])
+
+with right_col:
+    st.subheader("Profiles")
+    profile = st.radio(
+        "Choose investor profile:",
+        options=list(RECOMMENDED.keys()),
+        index=0
+    )
+    st.markdown("**Quick profile notes:**")
+    st.write(
+        """
+        * **Low-risk (45-65):** Capital preservation, modest growth, higher allocation to fixed income & cash.  
+        * **Moderate-risk (30-45):** Balanced growth and income; mix of equities & bonds.  
+        * **High-risk (25-35):** Growth-focused; higher equity / alternative exposure, long-term horizon.
+        """
+    )
+    st.markdown("---")
+    st.subheader("Download")
+    st.markdown("You can download the asset table or adjusted allocation below.")
+
+with left_col:
+    st.subheader("Asset Class Reference")
+    st.dataframe(df_assets, use_container_width=True)
+
+st.markdown("---")
+
+# ---------------------------
+# Show & edit allocation
+# ---------------------------
+st.header(f"Recommended Allocation — {profile}")
+base_alloc = RECOMMENDED[profile].copy()
+
+# show sliders for each asset in profile
+st.info("Adjust allocations below. Total must be 100% — use Normalize to auto-fix.")
+edited = {}
+cols = st.columns(2)
+i = 0
+for asset, default_pct in base_alloc.items():
+    col = cols[i % 2]
+    val = col.slider(asset, min_value=0, max_value=100, value=int(default_pct), key=f"slider_{profile}_{asset}")
+    edited[asset] = val
+    i += 1
+
+# Normalization and checks
+col_norm, col_actions = st.columns([1, 2])
+with col_norm:
+    if st.button("Normalize to 100%"):
+        edited = normalize_allocations(edited)
+        # update sliders programmatically (can't set slider values from code after creation reliably)
+        # show normalized values below as a helper
+        st.success("Values normalized. Use the table below as the source of truth.")
+with col_actions:
+    if st.button("Reset to recommended"):
+        # reset by reloading the page (Streamlit has no easy way to reset all sliders); instruct user
+        st.experimental_rerun()
+
+# Show allocation table (derived from edited)
+alloc_df = make_allocation_df(edited)
+st.subheader("Allocation Table")
+st.dataframe(alloc_df[["Asset", "Risk", "Reward", "Time_Horizon", "Expected_Return_%", "Allocation_%"]], use_container_width=True)
+
+total_alloc = alloc_df["Allocation_%"].sum()
+if abs(total_alloc - 100) > 0.5:
+    st.warning(f"Total allocation is {total_alloc:.2f}%. It should be 100%. Click 'Normalize to 100%' to auto-fix.")
+else:
+    st.success(f"Total allocation = {total_alloc:.2f}%")
+
+# ---------------------------
+# Charts
+# ---------------------------
+st.subheader("Visualizations")
+
+fig_pie = px.pie(alloc_df, names="Asset", values="Allocation_%", title="Portfolio Allocation (Pie)", hole=0.35)
+fig_bar = px.bar(alloc_df.sort_values("Allocation_%", ascending=False), x="Allocation_%", y="Asset",
+                 orientation="h", title="Portfolio Allocation (Bar)", text="Allocation_%")
+
+# show plots side-by-side
+c1, c2 = st.columns([1, 1])
+c1.plotly_chart(fig_pie, use_container_width=True)
+c2.plotly_chart(fig_bar, use_container_width=True)
+
+# ---------------------------
+# Expected return & risk summary (simple aggregated estimate)
+# ---------------------------
+st.subheader("Estimated Portfolio Characteristics (approximate)")
+
+def estimate_portfolio_return(df):
+    # crude midpoint estimate from expected ranges in the asset table
+    est_returns = []
+    for idx, row in df.iterrows():
+        s = row["Expected_Return_%"]
+        pct = row["Allocation_%"] / 100.0
+        if isinstance(s, str):
+            if "-" in s:
+                low, high = s.split("-")
+                try:
+                    low = float(low.strip())
+                    high = float(high.strip())
+                    mid = (low + high) / 2.0
+                except:
+                    mid = None
+            else:
+                try:
+                    mid = float(s)
+                except:
+                    mid = None
+        else:
+            try:
+                mid = float(s)
+            except:
+                mid = None
+        if mid is not None:
+            est_returns.append(mid * pct)
+    if est_returns:
+        return sum(est_returns)
+    return None
+
+est_port_ret = estimate_portfolio_return(alloc_df)
+if est_port_ret:
+    st.markdown(f"**Estimated (approx.) portfolio return:** ~ **{est_port_ret:.2f}% p.a.** (weighted midpoint estimates)")
+else:
+    st.markdown("Estimated return: **Not available** (some assets have variable returns).")
+
+# crude risk score: map risk labels to numbers then weighted average
+RISK_SCORE_MAP = {
+    "Very Low": 1,
+    "Low": 2,
+    "Low - Moderate": 2.5,
+    "Moderate": 3,
+    "Moderate - High": 3.5,
+    "High": 4,
+    "Very High": 5,
+    "Extremely High": 5,
+    "Custom": 3
+}
+def estimate_portfolio_risk(df):
+    scores = []
+    for idx, row in df.iterrows():
+        rlabel = row["Risk"]
+        score = RISK_SCORE_MAP.get(rlabel, 3)
+        weight = row["Allocation_%"] / 100.0
+        scores.append(score * weight)
+    return sum(scores)
+
+risk_score = estimate_portfolio_risk(alloc_df)
+st.markdown(f"**Estimated portfolio risk score (1 low — 5 high):** **{risk_score:.2f}**")
+
+st.markdown("""
+> **Interpretation:**  
+> * Score ≈ 1–2 : Very conservative portfolio  
+> * Score ≈ 2–3 : Conservative / balanced  
+> * Score ≈ 3–4 : Growth oriented  
+> * Score ≈ 4–5 : Aggressive / speculative
+""")
+
+# ---------------------------
+# Download CSV
+# ---------------------------
+st.subheader("Export / Save")
+csv_bytes = df_to_csv_bytes(alloc_df[["Asset", "Allocation_%", "Risk", "Reward", "Time_Horizon", "Expected_Return_%"]])
+st.download_button(label="Download allocation as CSV", data=csv_bytes, file_name=f"{profile.replace(' ', '_')}_allocation.csv", mime="text/csv")
+
+# also allow saving the assets reference
+assets_csv_bytes = df_to_csv_bytes(df_assets)
+st.download_button(label="Download asset-class reference CSV", data=assets_csv_bytes, file_name="asset_class_reference.csv", mime="text/csv")
+
+# ---------------------------
+# Footer / Notes
+# ---------------------------
+st.markdown("---")
+st.markdown(
+    """
+    ### Notes & disclaimers
+    * The expected return ranges are approximate, **not guarantees**. They are mid/long-term estimates and can vary by market cycle.
+    * This app is educational — not financial advice. For personalized investing, consult a certified financial advisor.
+    * Asset names are descriptive — use appropriate instruments (ETFs, mutual funds, bonds, physical assets) per your region & regulation.
+    """
+)
